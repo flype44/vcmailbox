@@ -1,0 +1,180 @@
+   NAME
+
+	VCMAILBOX
+
+   FORMAT
+
+	VCMAILBOX [ASCII] [SWAP] [FULL] [VERBOSE] <word0> <word1> ...
+
+   TEMPLATE
+
+	ASCII/S,SWAP/S,FULL/S,VERBOSE/S,WORDS/F/A
+
+   PATH
+
+	C:VCMAILBOX
+
+   FUNCTION
+
+	Lowlevel utility to send requests to the VideoCore via the RPi mailbox.
+
+	ASCII   - Display the first response as ASCII string.
+	SWAP    - Byteswap the response words, to cancel the byteswapping
+	          done by the mailbox.resource (see NOTES).
+	FULL    - Display all the response words.
+	VERBOSE - Display more detailed information.
+	WORDS   - A mandatory list of words to send to the mailbox.
+
+	Without any argument, the usage is displayed.
+
+	The options, if any, must be declared BEFORE the WORDS.
+	The rest of the line is reserved for the list of WORDS.
+
+	Numbers can be decimal, hexadecimal (0x...) or octal (leading 0).
+
+	The trailing words of the last tag may be omitted: the request is
+	completed with zeros according to the tag buffer size. For example
+	"0x10002 4" is the same as "0x10002 4 0 0".
+
+	To build consistent mailbox requests, follow this documentation:
+	https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
+
+   RESULT
+
+	Standard DOS return codes.
+
+	0  (OK)    - The VideoCore completed the request.
+	5  (WARN)  - The VideoCore returned an error.
+	10 (ERROR) - Invalid arguments.
+	20 (FAIL)  - The mailbox.resource is not available.
+
+   NOTES
+
+	This is a free implementation of the RaspberryPi 'vcmailbox' utility.
+	This port is intended to run on AmigaOS with a PiStorm/Emu68 environment.
+	It requires the 'mailbox.resource' present in the Emu68 1.1+ expansion ROM.
+
+	The mailbox.resource byteswaps the messages between the 68k and the ARM,
+	so the response words can be used as 32-bit numbers. A few tags return
+	blobs, like the MAC address, that must not be byteswapped: use SWAP to
+	read them in their original byte order.
+
+	For further information, please see:
+	https://github.com/flype44/vcmailbox
+	https://github.com/michalsc/mailbox.resource
+	https://github.com/raspberry/utils/blob/master/vcmailbox
+
+   EXAMPLES
+
+	Simple examples
+	---------------
+
+	> vcmailbox 0x00001 4 0 0        ; GET_FIRMWARE_REVISION
+	> vcmailbox 0x10001 4 0 0        ; GET_BOARD_MODEL
+	> vcmailbox 0x10002 4 0 0        ; GET_BOARD_REVISION
+	> vcmailbox SWAP 0x10003 8 0 0 0 ; GET_BOARD_MAC_ADDRESS
+	> vcmailbox 0x10004 8 0 0 0      ; GET_BOARD_SERIAL
+	> vcmailbox 0x10005 8 0 0 0      ; GET_ARM_MEMORY
+	> vcmailbox 0x10006 8 0 0 0      ; GET_VC_MEMORY
+
+	> vcmailbox 0x20001 8 0 0 0      ; GET_POWER_STATE  (SDCard)
+	> vcmailbox 0x20002 8 0 0 0      ; GET_POWER_TIMING (SDCard)
+
+	> vcmailbox 0x30001 8 0 3 0      ; GET_CLOCK_STATE    (ARM)
+	> vcmailbox 0x30002 8 0 3 0      ; GET_CLOCK_RATE     (ARM)
+	> vcmailbox 0x30007 8 0 3 0      ; GET_CLOCK_RATE_MIN (ARM)
+	> vcmailbox 0x30004 8 0 3 0      ; GET_CLOCK_RATE_MAX (ARM)
+
+	> vcmailbox 0x30003 8 0 1 0      ; GET_VOLTAGE     (Core)
+	> vcmailbox 0x30008 8 0 1 0      ; GET_VOLTAGE_MIN (Core)
+	> vcmailbox 0x30005 8 0 1 0      ; GET_VOLTAGE_MAX (Core)
+
+	> vcmailbox 0x30006 8 0 0 0      ; GET_TEMPERATURE
+	> vcmailbox 0x3000A 8 0 0 0      ; GET_TEMPERATURE_MAX
+
+	> vcmailbox 0x30009 8 0 0 0      ; GET_TURBO
+	> vcmailbox 0x38009 8 0 0 0      ; SET_TURBO (OFF)
+	> vcmailbox 0x38009 8 0 0 1      ; SET_TURBO (ON)
+
+	> vcmailbox 0x30041 8 0 42 0     ; GET_LED_STATUS (Status LED)
+	> vcmailbox 0x38041 8 0 42 0     ; SET_LED_STATUS (Status LED) (OFF)
+	> vcmailbox 0x38041 8 0 42 1     ; SET_LED_STATUS (Status LED) (ON)
+
+	> vcmailbox 0x30041 8 0 130 0    ; GET_LED_STATUS (Power LED)
+	> vcmailbox 0x38041 8 0 130 0    ; SET_LED_STATUS (Power LED) (OFF)
+	> vcmailbox 0x38041 8 0 130 1    ; SET_LED_STATUS (Power LED) (ON)
+
+	> vcmailbox 0x40002 4 0 0        ; BLANK_SCREEN (OFF)
+	> vcmailbox 0x40002 4 0 1        ; BLANK_SCREEN (ON)
+
+	> vcmailbox 0x40003 8 0 0 0      ; GET_PHYSICAL_SIZE
+	> vcmailbox 0x40004 8 0 0 0      ; GET_VIRTUAL_SIZE
+
+	> vcmailbox 0x40005 4 0 0        ; GET_DEPTH
+	> vcmailbox 0x40006 4 0 0        ; GET_PIXEL_ORDER
+	> vcmailbox 0x40007 4 0 0        ; GET_ALPHA_MODE
+	> vcmailbox 0x40008 4 0 0        ; GET_PITCH
+	> vcmailbox 0x40009 8 0 0 0      ; GET_VIRTUAL_OFFSET
+	> vcmailbox 0x4000A 16 0 0 0 0 0 ; GET_OVERSCAN
+	> vcmailbox 0x4000B 1024         ; GET_PALETTE
+
+	Nested examples
+	---------------
+
+	It's possible to stack multiple requests.
+
+	> vcmailbox SWAP 0x10003 8 0 0 0 0x10004 8 0 0 0 ; get mac and serial
+	> vcmailbox 0x30006 8 0 0 0 0x3000A 8 0 0 0     ; get temperatures
+	> vcmailbox 0x30004 8 0 3 0 0x30047 8 0 3 0     ; get clock rates
+
+	FULL examples
+	-------------
+
+	> vcmailbox 0x10002 4 0 0
+	> 0x00B03115
+
+	> vcmailbox FULL 0x10002 4 0 0
+	> 0x0000001C 0x80000000 0x00010002 0x00000004 0x80000004 0x00B03115 0x00000000
+
+	VERBOSE examples
+	----------------
+
+	> vcmailbox VERBOSE 0x10002 4 0 0
+	> [05] 0x00B03115 ; Tag[0] Response[00] => 11546901
+
+	> vcmailbox VERBOSE FULL 0x10002 4 0 0
+	> [00] 0x0000001C ; Size (28 bytes)
+	> [01] 0x80000000 ; Code (Success)
+	> [02] 0x00010002 ; Tag[0] Identifier
+	> [03] 0x00000004 ; Tag[0] Size (4 bytes)
+	> [04] 0x80000004 ; Tag[0] Code (Success, 4 bytes)
+	> [05] 0x00B03115 ; Tag[0] Response[00] => 11546901
+	> [06] 0x00000000 ; End
+
+	SWAP example
+	------------
+
+	The MAC address is a blob of 6 bytes, not a 32-bit number.
+	Without SWAP the bytes are reversed in each word.
+
+	> vcmailbox 0x10003 8 0 0 0
+	> 0xFF015FE4 0x0000ECEB
+
+	> vcmailbox SWAP 0x10003 8 0 0 0
+	> 0xE45F01FF 0xEBEC0000
+
+	The MAC address is E4:5F:01:FF:EB:EC (the last 2 bytes are padding).
+
+	ASCII example
+	-------------
+
+	This option is currently only useful with the
+	mailbox GET_COMMAND_LINE (0x00050001) tag identifier.
+	The tag buffer size (512 bytes) must be large enough for the response.
+
+	> vcmailbox ASCII 0x50001 512
+	> bcm2708_fb.fbwidth=1920 bcm2708_fb.fbheight=1080 bcm2708_fb.fbswap=1
+	> smsc95xx.macaddr=E4:5F:01:FF:EB:EC vc_mem.mem_base=0x3ec00000
+	> vc_mem.mem_size=0x40000000  logo=black ps32
+
+	(The output is a single line, wrapped here.)

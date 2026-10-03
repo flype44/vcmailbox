@@ -2,17 +2,17 @@
 #
 # SAS/C Makefile for "vcmailbox"
 # for AmigaOS M68K SAS/C 6.59 Compiler
-# 
+#
 #################################################
 
 OUTFILE=vcmailbox
 
-OBJECTS=vcmailbox.o
+OBJECTS=vcmailbox.o utils.o
 
 all: $(OUTFILE)
 
 clean:
-	@delete $(OBJECTS)
+    @delete $(OBJECTS) QUIET
 
 $(OUTFILE): $(OBJECTS)
-	sc MATH=STANDARD CHKABORT NOICONS STRIPDEBUG LINK $(OBJECTS)
+    sc LINK $(OBJECTS) PROGRAMNAME $(OUTFILE)
